@@ -1,0 +1,31 @@
+{
+  "name": "workout-planner",
+  "version": "1.0.0",
+  "description": "GraphQL API for managing workout schedules",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "test": "jest"
+  },
+  "author": "Tej",
+  "license": "MIT",
+  "dependencies": {
+    "apollo-server-express": "^3.13.0",
+    "express": "^4.17.1",
+    "graphql": "^16.8.1",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/express": "4.17.14",
+    "@types/express-serve-static-core": "4.17.31",
+    "@types/graphql": "^14.5.0",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.11.27",
+    "@types/uuid": "^9.0.8",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.4.2"
+  }
+}
