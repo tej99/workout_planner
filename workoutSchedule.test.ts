@@ -38,8 +38,8 @@ const DELETE_WORKOUT_SCHEDULE = gql`
 `;
 
 const GET_WORKOUT_SCHEDULES = gql`
-    query GetWorkoutSchedules {
-        getWorkoutSchedules {
+    query GetWorkoutSchedules($start: String!, $end: String!) {
+        getWorkoutSchedules(start: $start, end: $end) {
             id
             workout {
                 id
@@ -65,9 +65,14 @@ describe('WorkoutSchedule API', () => {
     });
 
     it('should return workout schedules', async () => {
-        const {data, errors} = await server.executeOperation({query: GET_WORKOUT_SCHEDULES});
+        const {data, errors} = await server.executeOperation({
+            query: GET_WORKOUT_SCHEDULES,
+            variables: {
+                start: '2023-12-30',
+                end: '2024-01-05',
+            }
+        });
 
-        console.log(JSON.stringify(data))
         expect(errors).toBeUndefined();
         expect(data).toEqual({
             getWorkoutSchedules: [
@@ -94,6 +99,23 @@ describe('WorkoutSchedule API', () => {
         });
         expect(res.data?.createWorkoutSchedule).toBeDefined();
         //assert record in db
+    });
+
+    it('should NOT create a workout schedule for same day', async () => {
+        // Assuming you have a Workout already created with an ID
+        const workoutId = 1;
+        const res = await server.executeOperation({
+            query: CREATE_WORKOUT_SCHEDULE,
+            variables: {
+                workoutId,
+                scheduledDay: workoutSchedules[0].scheduledDay.toISOString().split('T')[0], // TODO use better date util
+                scheduledTime: 'MORNING'
+            }
+        });
+
+        expect(res.errors).toBeDefined();
+        const errorMessages = res.errors?.map((error: any) => error.message);
+        expect(errorMessages).toContain("Workout schedule already exists for this day");
     });
 
     it('should update a workout schedule', async () => {

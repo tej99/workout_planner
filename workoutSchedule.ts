@@ -44,7 +44,7 @@ export const typeDefs = gql`
     }
 
     type Query {
-        getWorkoutSchedules: [WorkoutSchedule!]!
+        getWorkoutSchedules(start: String!, end: String!): [WorkoutSchedule!]!
         getWorkoutSchedule(id: String!): WorkoutSchedule
     }
     
@@ -83,16 +83,28 @@ const fetchWorkoutSchedule = (id: string, userId: string): WorkoutSchedule | nul
     return workoutSchedules.find(workoutSchedule => workoutSchedule.id === id && workoutSchedule.userId === userId) || null;
 }
 
+const fetchWorkoutSchedules = (userId: string, start: Date, end: Date): WorkoutSchedule[] => {
+    return workoutSchedules.filter(
+        workoutSchedule => workoutSchedule.userId === userId &&
+            workoutSchedule.scheduledDay >= start && workoutSchedule.scheduledDay <= end
+    );
+}
+
 const fetchWorkout = (id: number): Workout | null => {
     return workouts.find(workout => workout.id === id) || null;
 }
 
 export const resolvers = {
     Query: {
-        getWorkoutSchedules: () => workoutSchedules.filter(workoutSchedule => workoutSchedule.userId === getUserId()),
+        getWorkoutSchedules: (_: any, args: { start: string, end: string }) => {
+            // TODO: should probably create a custom graphql type for proper parsing.
+            return fetchWorkoutSchedules(getUserId(), new Date(args.start),  new Date(args.end))
+        },
         getWorkoutSchedule: (_: any, args: { id: string }) => fetchWorkoutSchedule(args.id, getUserId()),
     },
     Mutation: {
+        // TODO: add ability to create multiple schedules at once, depends on the UX flow we want in the front end - not provided
+        // Is the user selecting a workout first and then days to schedule it for OR select day then workout? - not stated in doc
         createWorkoutSchedule: (_: any, {
             workoutId,
             scheduledDay,
@@ -101,11 +113,16 @@ export const resolvers = {
             if (fetchWorkout(workoutId) === null) {
                 throw new UserInputError('Workout does not exist');
             }
+            const scheduledDayDate = new Date(scheduledDay); // TODO: should probably create a custom graphql type for proper parsing.
+            if (fetchWorkoutSchedules(getUserId(), scheduledDayDate, scheduledDayDate).length > 0) {
+                // requirement - only one workout per day.
+                throw new UserInputError('Workout schedule already exists for this day');
+            }
             const newSchedule: WorkoutSchedule = {
                 id: uuidv4(), // let db handle conflicts
                 userId: getUserId(),
                 workoutId,
-                scheduledDay: new Date(scheduledDay), // should probably create a custom graph type for this for proper parsing.
+                scheduledDay: scheduledDayDate,
                 scheduledTime,
             };
             workoutSchedules.push(newSchedule);
@@ -128,7 +145,7 @@ export const resolvers = {
         deleteWorkoutSchedule: (_: any, {id}: { id: string }): boolean => {
             const index = workoutSchedules.findIndex(workoutSchedule => workoutSchedule.id === id && workoutSchedule.userId == getUserId());
             if (index !== -1) {
-                const _deletedWorkout = workoutSchedules.splice(index, 1);
+                workoutSchedules.splice(index, 1);
                 return true;
             }
             return false;
